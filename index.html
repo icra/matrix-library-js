@@ -1,0 +1,178 @@
+<!doctype html><html><head>
+  <meta charset=utf8>
+  <title>Multiple Linear Regression</title>
+  <!--
+    development version, includes helpful console warnings
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    production version, optimized for size and speed
+    <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+  -->
+  <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+</head><body>
+
+<!--title-->
+<h1 style="margin-bottom:0">Multiple Linear Regression (least squares method)</h1>
+<code><p>
+  <details>
+    <summary style="cursor:pointer">
+      <b>Reference</b>:
+      Douglas C. Montgomery, "Introduction to Statistical Quality Control", 7ed (2013)
+    </summary>
+    <div style="padding-left:5px">
+      <ul>
+        <li>page 156: Section 4.6 "Linear Regression Models"
+        <li>page 161: Example 4.13 "Fitting a Linear Regression Model"
+      </ul>
+    </div>
+  </details>
+</p></code><hr>
+
+<!--page content-->
+<div id=app>
+  <p>
+    <button :disabled="result" @click="perform_mlr()">Calculate Multiple Linear Regression</button>
+    <button :disabled="!result" @click="result=false">Clear results</button>
+  </p>
+
+  <div>
+    <ul>
+      <li>
+        <b>Calculated formula</b>:
+        <span v-if="result">
+          Target variable = 
+          <span>{{result.betas[0].toFixed(2)}} +</span>
+          <span v-for="b,i in result.betas" v-if="i>0">
+            {{b.toFixed(2)}}*(Variable {{i}})
+            <span v-if="i<result.betas.length-1">+</span>
+          </span>
+        </span>
+      </li>
+      <li><b>R<sup>2</sup>   </b>: <span v-if="result">{{result.R2    .toFixed(4)}}</span></li>
+      <li><b>R<sup>2</sup>adj</b>: <span v-if="result">{{result.R2_adj.toFixed(4)}}</span></li>
+    </ul>
+  </div>
+
+  <table border=1>
+    <tr>
+      <th v-for="arr,i in predictors">
+        Variable {{i+1}}
+      </th>
+      <th>
+        Target variable
+      </th>
+      <th>
+        Predictions
+      </th>
+      <th>
+        Predictions Error
+      </th>
+    </tr>
+    <tr v-for="val,i in predictors[0]">
+      <td v-for="arr,j in predictors">
+        {{predictors[j][i]}}
+      </td>
+      <td>
+        {{target_variable[i]}}
+      </td>
+      <td>
+        <div v-if="result"> 
+          {{result.predictions[i].toFixed(2)}}
+        </div>
+      </td>
+      <td>
+        <div v-if="result"> 
+          {{result.errors[i].toFixed(2)}}
+        </div>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<!--backend-->
+<script>
+  let app=null; //global variable
+</script>
+
+<script type=module>
+  import { ones, transposed, multiply, inverse, subtract } from './module.js';
+
+  /*
+    Multiple Linear Regression implementation from:
+    Douglas C. Montgomery, Introduction to Statistical Quality Control, 7ed (2013)
+    page 156: Section 4.6 "Linear Regression Models"
+  */
+  function multiple_linear_regression(X,y){
+    y = [y];
+
+    let Xt           = transposed(X);
+    let XtX          = multiply(Xt,X);
+    let XtXi         = inverse(XtX)
+    let Xty          = multiply(Xt,y);
+    let B            = multiply(XtXi,Xty); //coefficients: result of MLR
+    let predicted_ys = multiply(X,B); //fitted model
+    let e            = subtract(y,predicted_ys); //prediction error
+
+    //Calculate R2 (strength of regression)
+    let SSE = subtract(
+      multiply(transposed(y),y),
+      multiply(transposed(B),Xty)
+    )[0][0];
+    let ys = y[0];
+    let n  = ys.length;
+    let sum_of_ys = ys.reduce((p,c)=>(p+c),0);
+    let SST = multiply(transposed(y),y)[0][0] - sum_of_ys*sum_of_ys/n;
+    let R2 = 1-SSE/SST;
+    let p = B[0].length;
+    let R2_adj = 1 - ((n-1)/(n-p))*(1-R2);
+
+    //return result of the regression
+    let betas       = B[0];
+    let predictions = predicted_ys[0];
+    let errors      = e[0];
+
+    return {betas, predictions, errors, SSE, SST, R2, R2_adj};
+  }
+
+  //independent variables (xi) and target variable (y)
+  let x1=[80,   93,   100,  82,   90,   99,   81,   96,   94,   93,   97,   95,   100,  85,   86,   87  ];
+  let x2=[8,    9,    10,   12,   11,   8,    8,    10,   12,   11,   13,   11,   8,    12,   9,    12  ];
+  let  y=[2256, 2340, 2426, 2293, 2330, 2368, 2250, 2409, 2364, 2379, 2440, 2364, 2404, 2317, 2309, 2328];
+  /*
+    let points=[
+      {x:30, y:25},
+      {x:28, y:30},
+      {x:32, y:27},
+      {x:25, y:40},
+      {x:25, y:42},
+      {x:25, y:40},
+      {x:22, y:50},
+      {x:24, y:45},
+      {x:35, y:30},
+      {x:40, y:25},
+    ];
+    let x = points.map(p=>p.x);
+    let y = points.map(p=>p.y);
+  */
+
+  app=new Vue({
+    el:"#app",
+    data:{
+      predictors:[x1,x2],
+      target_variable:y,
+      result:false,
+    },
+    methods:{
+      perform_mlr(){
+        let n = this.predictors[0].length;
+        if(!n) throw("number of variables (n) is zero");
+        let X = [ones(n), ...this.predictors];
+        let y = this.target_variable;
+        this.result = multiple_linear_regression(X,y);
+        console.log("MLR calculated");
+      },
+    },
+    mounted(){
+      //this.perform_mlr();
+    },
+  });
+</script>

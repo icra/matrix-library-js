@@ -1,0 +1,12 @@
+{
+  "name": "matrix-library",
+  "type":"module",
+  "version": "1.0.0",
+  "description": "A simple javascript library to work with matrices",
+  "main": "module.js",
+  "scripts": {
+    "test": "node tests.js"
+  },
+  "author": "Lluís Bosch (github.com/holalluis)",
+  "license": "ISC"
+}
