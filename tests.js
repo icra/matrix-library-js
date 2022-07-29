@@ -20,6 +20,8 @@ import {
   determinant,
   adjoint,
   inverse,
+  gaussian_elimination,
+  covariance_matrix,
 } from './module.js';
 
 /*
@@ -59,6 +61,7 @@ test_must_fail(()=>{check_matrix([[1],[],[1,2]])}); //different number of elemen
 
 //equal matrices
 {
+  console.log("Testing matrix equality")
   let A=[[1,2],[3,4]];
   let B=[[1,2],[3,4]];
   let C=[[3,4],[5,6]];
@@ -68,6 +71,7 @@ test_must_fail(()=>{check_matrix([[1],[],[1,2]])}); //different number of elemen
 
 //transposed matrix
 {
+  console.log("Testing transposed matrix")
   let A = transposed([[1,2,3],[4,5,6],[7,8,9]]);
   let B =            [[1,4,7],[2,5,8],[3,6,9]];
   assert(are_equal(A,B),'B is transposed of A');
@@ -75,6 +79,7 @@ test_must_fail(()=>{check_matrix([[1],[],[1,2]])}); //different number of elemen
 
 //minors
 {
+  console.log("Testing matrix minor")
   let A=[
     [1,4,7],
     [2,5,8],
@@ -88,13 +93,19 @@ test_must_fail(()=>{check_matrix([[1],[],[1,2]])}); //different number of elemen
 
 //matrix multiplication
 {
+  console.log("Testing matrix multiplication")
   let A=[[1,4,7],[2,5,8],[3,6,9]];
   let AA=multiply(A,A);
   assert(are_equal(AA,[[30,66,102],[36,81,126],[42,96,150]]),'Error in matrix multiplication')
+
+  let M=[[5,2,-3]];
+  assert(multiply(transposed(M),M)[0].length==1,"wrong lengths");
+  assert(multiply(M,transposed(M))[0].length==3,"wrong lengths");
 }
 
 //matrix multiplied by scalar
 {
+  console.log("Testing matrix times scalar")
   let A=[[1,2,3],[4,5,6],[7,8,9]];
   let B=escalate(A,2);
   assert(are_equal(B,[[2,4,6],[8,10,12],[14,16,18]]),'2A is B');
@@ -102,6 +113,7 @@ test_must_fail(()=>{check_matrix([[1],[],[1,2]])}); //different number of elemen
 
 //matrix sum
 {
+  console.log("Testing matrix sum")
   let A=[[1,2,3],[4,5,6],[7,8,9]];
   let B=[[1,1,1],[2,2,2],[3,3,3]];
   let C=sum(A,B);
@@ -110,6 +122,7 @@ test_must_fail(()=>{check_matrix([[1],[],[1,2]])}); //different number of elemen
 
 //matrix subtraction
 {
+  console.log("Testing matrix subtraction")
   let A=[[1,4,7],[2,5,8],[3,6,9]];
   let B=[[1,4,7],[1,4,7],[1,4,7]];
   let C=subtract(A,B);
@@ -118,14 +131,21 @@ test_must_fail(()=>{check_matrix([[1],[],[1,2]])}); //different number of elemen
 
 //determinants
 {
-  assert(determinant([[1,3],[2,4]]                                  )== -2,"Determinant should be -2" );
-  assert(determinant([[1,4,7],[2,5,8],[3,6,9]]                      )==  0,"Determinant should be 0"  );
-  assert(determinant([[1,2,-1,3],[0,-3,2,2],[3,-2,1,5],[-3,3,2,0]]  )==-80,"Determinant should be -80");
-  assert(determinant([[2,4,-2,4],[1,5,5,11],[-1,-3,-2,-4],[2,6,6,8]])==-12,"Determinant should be -12");
+  console.log("Testing determinant")
+  assert(determinant([[1,3],[2,4]]                                    )== -2,"Determinant is not -2" );
+  assert(determinant([[1,4,7],[2,5,8],[3,6,9]]                        )==  0,"Determinant is not 0"  );
+  assert(determinant([[2,4,-2,4],[1,5,5,11],[-1,-3,-2,-4],[2,6,6,8]]  )==-12,"Determinant is not -12");
+
+  //case where there is an error of 1e-13
+  let d    = determinant([[0,0,0,-1],[-2,-6,11,-2],[-5,3,5,-1],[8,1,-3,3]]);
+  let TOL  = 1e-10;
+  let diff = Math.abs(-441-d);
+  assert(diff<TOL,`-441 != ${d} (${diff})`)
 }
 
 //adjoint matrix
 {
+  console.log("Testing adjoint matrix")
   let A=[[1,0,4],[0,3,0],[2,0,5]];
   let B=adjoint(A);
   assert(are_equal(B,[[15,0,-6],[0,-3,0],[-12,0,3]]),"B is the adjoint of A");
@@ -133,6 +153,7 @@ test_must_fail(()=>{check_matrix([[1],[],[1,2]])}); //different number of elemen
 
 //inverse matrix
 {
+  console.log("Testing inverse matrix")
   let A=[[4,0,1],[0,0,-2],[0,-2,8]];
   let Ai=inverse(A);
   let I=multiply(A,Ai);
@@ -159,4 +180,35 @@ test_must_fail(()=>{check_matrix([[1],[],[1,2]])}); //different number of elemen
   //console.log({d,T,B,C,D,E,F,G,H,I});
 }
 
-console.log("All tests passed");
+{//test for gaussian elimination
+  console.log("Testing gaussian elimination")
+  //create large matrix of random numbers with zeros
+  let n=100;
+  let M=[];
+  for(let i=0;i<n;i++){
+    let new_row=[];
+    for(let j=0;j<n;j++){
+      let r = Math.max(0,1000*Math.random()-500);
+      r = r ? r-250:0;
+      new_row.push(r);
+    }
+    M.push(new_row);
+  }
+  let T=gaussian_elimination(M);
+  let detM=determinant(M);
+  let detT=determinant(T);
+  assert(detM==detT,"Determinants are different");
+}
+
+{//test for covariance matrix TODO
+  console.log("Testing covariance matrix")
+  let X =[[15,35,20,14,28],[12.5,15.8,9.3,20.1,5.2],[50,55,70,65,80]];
+  let S = covariance_matrix(X);
+  let Xb = [
+    [115.25,115.91,115.05,116.21,115.90,115.55,114.98,115.25,116.15,115.92,115.75,114.90,116.01,115.83,115.29,115.63,115.47,115.58,115.72,115.40],
+    [1.04,1.06,1.09,1.05,1.07,1.06,1.05,1.10,1.09,1.05,0.99,1.06,1.05,1.07,1.11,1.04,1.03,1.05,1.06,1.04],
+  ];
+  let Sb = covariance_matrix(Xb);
+}
+
+console.log("\nALL TESTS PASSED");
