@@ -191,7 +191,7 @@ export function multiply(A,B){
 */
 export function escalate(M,escalar){
   check_matrix(M);
-  return M.map(col=>col.map(el=>el*escalar));
+  return M.map(col=>col.map(n=>n*escalar));
 }
 
 /*
@@ -711,11 +711,13 @@ export function diag(arr){
   return M;
 }
 
-export function PCA(M){
+export function PCA(M,a){
+  a=a||false; //nº of PCs to keep
+
   let m = M.length;    //nº of variables
   let n = M[0].length; //nº of observations
-  console.log("===PCA===")
-  console.log({observations:n, variables:m});
+  //console.log("----PCA----"); //debug
+  //console.log({observations:n, variables:m}); //debug
 
   //mean center and scale with unit variance
   let X = M.map(col=>col.normalize());
@@ -729,42 +731,44 @@ export function PCA(M){
   let loadings_unsorted    = transposed(svd.u); //matrix size mxm
 
   //sort eigenvalues and loadings
-  let eigenvalues = [];
-  let loadings    = [];
+  let eigenvalues_sorted = [];
+  let loadings_sorted    = [];
   for(let i=0; i<eigenvalues_unsorted.length; i++){
     let max   = Math.max.apply(null, eigenvalues_unsorted);
     let index = eigenvalues_unsorted.indexOf(max);
-    eigenvalues.push(eigenvalues_unsorted[index]);
+    eigenvalues_sorted.push(eigenvalues_unsorted[index]);
     let pc = loadings_unsorted[index];
-    loadings.push(pc);
+    loadings_sorted.push(pc);
     eigenvalues_unsorted[index]=-Infinity;
   }
 
-  let sum_eigs             = eigenvalues.sum();
-  let accumulated_variance = eigenvalues.map((e,i)=>eigenvalues.slice(0,i+1).sum()/sum_eigs);
-  console.log({eigenvalues,accumulated_variance});
+  let sum_eigs             = eigenvalues_sorted.sum();
+  let variance             = eigenvalues_sorted.map((e,i)=>100*e/sum_eigs);    //percentages
+  let accumulated_variance = variance.map((e,i)=>variance.slice(0,i+1).sum()); //percentages (accumulated)
 
   //we keep "a" loadings: number of principal components
-  let a = m;
-  for(let i=0;i<accumulated_variance.length;i++){
-    if(accumulated_variance[i]>0.99){
-      a = i+1;
-      break;
+  let info=[];
+  if(a===false){
+    for(let i=0;i<accumulated_variance.length;i++){
+      if(accumulated_variance[i]>99){
+        a=i+1; //number of PCs to keep
+        break;
+      }
     }
+    info.push(`Number of PCs kept: ${a} <-- determined automatically`);
+  }else{
+    info.push(`Number of PCs kept: ${a} <-- passed as parameter`);
   }
-  console.log(`[info] Keeping ${a} of ${m} PCs explaining ${(100*accumulated_variance[a-1]).toFixed(2)}% of variance`);
+  info.push(`Kept ${a} of ${m} PCs: explaining ${(accumulated_variance[a-1]).toFixed(2)}% of variance`);
+  //console.log(info);
 
   //eigenvalues not considered for later analysis (Q test)
-  let eigenvalues_not_considered = eigenvalues.slice(a);
+  let eigenvalues_not_considered = eigenvalues_sorted.slice(a);
   //console.log({eigenvalues_not_considered});
 
   //overwrite loadings and eigenvalues
-  loadings    = loadings.slice(0,a); //només "a" columnes
-  eigenvalues = eigenvalues.slice(0,a);
-
-  loadings.forEach((pc,i)=>{
-    console.log(`PC${i+1}, ${pc.map(n=>n.toFixed(2)).join(', ')}`);
-  });
+  let loadings    = loadings_sorted   .slice(0,a); //we keep only "a" columns
+  let eigenvalues = eigenvalues_sorted.slice(0,a);
 
   //compute scores: observations in the new space
   let scores = multiply(X,loadings);
@@ -775,7 +779,6 @@ export function PCA(M){
 
   //SPE Q contribution analysis
   let Q_threshold_95 = (function(){
-
     let sqrt      = Math.sqrt; //function
     let theta1    = eigenvalues_not_considered.sum(); //number
     let theta2    = eigenvalues_not_considered.map(e=>e**2).sum(); //number
@@ -799,8 +802,6 @@ export function PCA(M){
     let contributions = get_row(residuals,i);
     faults_for_Q.push({observation:i, Q_residual, contributions});
   });
-  console.log({Q_threshold_95,faults_for_Q});
-  //-----------------------------------------------------------------
 
   //Hotelling T^2 contribution analysis
   let T2_threshold_95 = a*(n-1)/(n-a)*finv(0.95,a,n-a);
@@ -819,58 +820,94 @@ export function PCA(M){
     if(n<T2_threshold_95) return;
     let T2_residual = n;
 
-    //observation i reprojected into principal components
-    let t = get_row(scores,i); //array of size a
+    //get observation i (faulty)
+    let xi = get_row(X,i); //array of size m
 
-    //contribution from each pc
-    let contributions=[];
-    for(let j=0;j<a;j++){
-      let pij   = loadings[j][i]; //number
-      let ti    = t[j]; //number
-      let eig_i = eigenvalues[j]; //number
-      let xj    = get_row(X,i); //array
-      let cont  = xj.map(x=> ti/eig_i*pij*x); //array
-      contributions.push(cont);
+    //scores of observation i (faulty)
+    let ti = get_row(scores,i); //array of size a
+
+    //contribution from each "original" variable
+    let contributions=new Array(m); //array of size m
+
+    for(let j=0;j<m;j++){//forEach variable
+      let cont = 0;
+      for(let k=0;k<a;k++){//forEach PC
+        cont += ti[k]/eigenvalues[k]*loadings[k][j]*xi[j];
+      }
+      contributions[j] = cont;
     }
 
-    //transpose to be able to sum each variable
-    contributions = transposed(contributions).map(col=>col.sum());
-    console.log({contributions});
+    //console.log({contributions});
     faults_for_T2.push({observation:i, T2_residual, contributions});
   });
 
-  //find observations with fauls for Q
-  console.log({T2_threshold_95,faults_for_T2});
-
-  //print table T2 vs Q
-  (function(){
-    return;
-    console.log("T2, Q, (first row are thresholds)");
-    console.log(`${T2_threshold_95}, ${Q_threshold_95}`);
-    for(let i=0;i<n;i++){
-      console.log(`${T2_by_observation[i]}, ${Q[i]}`);
-    }
-  })();
+  return {
+    observations:n, variables:m, info,
+    eigenvalues, eigenvalues_sorted,
+    variance, accumulated_variance,
+    loadings, scores,
+    Q_threshold_95,     T2_threshold_95,
+    Q_by_observation:Q, T2_by_observation,
+    faults_for_Q,       faults_for_T2,
+  };
 }
 
-//test
-const M=[
-  [22, 10, 2, 3, 7],
-  [14, 7, 10, 0, 8],
-  [-1, 13, -1, -11, 3],
-  [-3, -2, 13, -2, 4],
-  [9, 8, 1, -2, 4],
-  [9, 1, -7, 5, -1],
-  [2, -6, 6, 5, 1],
-  [4, 5, 0, -2, 2]
-];
-//PCA(M);
+/*create PCA report (CSV)*/
+/* idea: node file.js > result.csv */
+export function create_PCA_report(X,a,names_columns){
+  //X: numeric matrix
+  //a: number of PCs to keep (optional)
+  //names_columns: array of strings
+  let csv_report="";//string
 
-const M2=[
-  [10, 121.9   , 120.9   , 124.1   , 122.2   , 119.8   , 125.745 , 123.43  , 123.883 , 125.353 , 126.0153 , 125.3861 , 124.4702 , 121.3318 , 123.4016 , 121.654] ,
-  [10, 91.137  , 94.685  , 90.322  , 90.025  , 86.933  , 89.343  , 89.125  , 94.878  , 89.303  , 93.7609  , 92.4001  , 90.0061  , 87.8128  , 88.6698  , 85.324]  ,
-  [10, 108.096 , 111.838 , 107.391 , 106.646 , 103.966 , 105.897 , 107.203 , 107.497 , 107.976  , 109.373 , 111.612  , 109.7599 , 105.9164 , 110.0603 , 110.419] ,
-  [10, 126.2   , 124.3   , 126.9   , 125.9   , 123.8   , 129.197 , 129.044 , 126.674 , 129.283 , 128.8173 , 128.9062 , 128.2996 , 125.1422 , 126.7221 , 124.701] ,
-  [10, 24.2    , 19.8    , 19.2    , 20.06   , 19.5    , 21.75   , 21.79   , 20.06   , 22.43   , 22.52    , 23.32    , 24.32    , 17.68    , 17.38    , 17.71]
-];
-PCA(M2);
+  //object with the results of the PCA() call
+  let res = PCA(X,a);
+
+  //print EIGENVALUES FOR SCREE PLOT (determine visually the number of PCs to keep)
+  csv_report+="\n,"                              +res.eigenvalues_sorted.map((e,i)=>`PC${i+1}`).join(',')+'\n';
+  csv_report+="eigenvalues (most important PCs),"+res.eigenvalues.join(',')+'\n';
+  csv_report+="eigenvalues (all PCs),"           +res.eigenvalues_sorted.join(',')+'\n';
+  csv_report+="variance (all PCs) (%),"          +res.variance.join(',')+'\n';
+  csv_report+="acc. variance (all PCs) (%),"     +res.accumulated_variance.join(',')+'\n';
+
+  //print LOADINGS
+  csv_report+="\nLOADINGS\n";
+  res.loadings.forEach((row,i)=>{
+    if(i==0) csv_report+='PC,'+names_columns.join(',')+'\n';
+    csv_report+=`PC${i+1},`+row.join(',')+'\n';
+  });
+
+  //print SCORES (PCs) next to ORIGINAL DATA
+  csv_report+="\nSCORES and ORIGINAL DATA\n";
+  let scores        = transposed(res.scores);
+  let original_data = transposed(X);
+  for(let i=0; i<res.observations; i++){
+    if(i==0) csv_report+='observation,'+scores[i].map((n,i)=>`PC${i+1}`).join(',')+','+names_columns.join(',')+'\n';
+    csv_report+=String(i+1)+','+scores[i].join(',')+','+original_data[i].join(',')+'\n';
+  };
+
+  //FAULT DETECTION section
+  //print table Q vs T2
+  csv_report+="\nobservation, Q, T2\n";
+  for(let i=0;i<res.observations;i++){
+    csv_report+=`${i+1}, ${res.Q_by_observation[i]}, ${res.T2_by_observation[i]}\n`;
+  }
+
+  //print contributions to faults by variable
+  csv_report+="\nFAULTS DETECTED contribution by variable\n";
+  csv_report+=`Q_threshold_95, ${res.Q_threshold_95}\n`;
+  csv_report+=`T2_threshold_95, ${res.T2_threshold_95}\n`;
+
+  res.faults_for_Q.forEach((f,i)=>{
+    if(i==0) csv_report+='\nQ_residual,observation,'+names_columns.join(',')+'\n';
+    csv_report+=`${f.Q_residual},${f.observation+1},`+f.contributions.join(',')+'\n';
+  });
+
+  res.faults_for_T2.forEach((f,i)=>{
+    if(i==0) csv_report+='\nT2_residual,observation,'+names_columns.join(',')+'\n';
+    csv_report+=`${f.T2_residual},${f.observation+1},`+f.contributions.join(',')+'\n';
+  });
+
+  console.log(csv_report);
+  return csv_report;
+}
