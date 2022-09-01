@@ -23,6 +23,7 @@ import {
   gaussian_elimination,
   covariance_matrix,
   PCA,
+  create_PCA_report,
 } from './module.js';
 
 /*
@@ -43,26 +44,24 @@ function test_must_fail(fx){
   }
 }
 
-/*
-  Tests
-*/
+/* Tests */
 assert(1==1,"1 is 1");
-test_must_fail(()=>{assert(0==1,"0 is not 1");});
+test_must_fail(_=>assert(0==1,"0 is not 1"));
 
 assert(zeros(5).length==5);
 assert(ones(5).length==5);
 check_matrix([[1,2],[3,4]]);
 
 //check malformed matrices
-test_must_fail(()=>{check_matrix("A"           )}); //string
-test_must_fail(()=>{check_matrix([]            )}); //empty array
-test_must_fail(()=>{check_matrix([1,2,3]       )}); //simple array (no columns)
-test_must_fail(()=>{check_matrix([[],[1],[1]]  )}); //0 elements in one column
-test_must_fail(()=>{check_matrix([[1],[],[1,2]])}); //different number of elements in columns
+test_must_fail(_=>check_matrix("A"           )); //string
+test_must_fail(_=>check_matrix([]            )); //empty array
+test_must_fail(_=>check_matrix([1,2,3]       )); //simple array (no columns)
+test_must_fail(_=>check_matrix([[],[1],[1]]  )); //0 elements in one column
+test_must_fail(_=>check_matrix([[1],[],[1,2]])); //different number of elements in columns
 
 //equal matrices
 {
-  console.log("Testing matrix equality")
+  console.log("Testing are_equal()")
   let A=[[1,2],[3,4]];
   let B=[[1,2],[3,4]];
   let C=[[3,4],[5,6]];
@@ -72,7 +71,7 @@ test_must_fail(()=>{check_matrix([[1],[],[1,2]])}); //different number of elemen
 
 //transposed matrix
 {
-  console.log("Testing transposed matrix")
+  console.log("Testing transposed()")
   let A = transposed([[1,2,3],[4,5,6],[7,8,9]]);
   let B =            [[1,4,7],[2,5,8],[3,6,9]];
   assert(are_equal(A,B),'B is transposed of A');
@@ -80,7 +79,7 @@ test_must_fail(()=>{check_matrix([[1],[],[1,2]])}); //different number of elemen
 
 //minors
 {
-  console.log("Testing matrix minor")
+  console.log("Testing minor()")
   let A=[
     [1,4,7],
     [2,5,8],
@@ -94,7 +93,7 @@ test_must_fail(()=>{check_matrix([[1],[],[1,2]])}); //different number of elemen
 
 //matrix multiplication
 {
-  console.log("Testing matrix multiplication")
+  console.log("Testing multiply()")
   let A=[[1,4,7],[2,5,8],[3,6,9]];
   let AA=multiply(A,A);
   assert(are_equal(AA,[[30,66,102],[36,81,126],[42,96,150]]),'Error in matrix multiplication')
@@ -106,7 +105,7 @@ test_must_fail(()=>{check_matrix([[1],[],[1,2]])}); //different number of elemen
 
 //matrix multiplied by scalar
 {
-  console.log("Testing matrix times scalar")
+  console.log("Testing escalate()")
   let A=[[1,2,3],[4,5,6],[7,8,9]];
   let B=escalate(A,2);
   assert(are_equal(B,[[2,4,6],[8,10,12],[14,16,18]]),'2A is B');
@@ -114,7 +113,7 @@ test_must_fail(()=>{check_matrix([[1],[],[1,2]])}); //different number of elemen
 
 //matrix sum
 {
-  console.log("Testing matrix sum")
+  console.log("Testing sum()")
   let A=[[1,2,3],[4,5,6],[7,8,9]];
   let B=[[1,1,1],[2,2,2],[3,3,3]];
   let C=sum(A,B);
@@ -123,7 +122,7 @@ test_must_fail(()=>{check_matrix([[1],[],[1,2]])}); //different number of elemen
 
 //matrix subtraction
 {
-  console.log("Testing matrix subtraction")
+  console.log("Testing subtract()")
   let A=[[1,4,7],[2,5,8],[3,6,9]];
   let B=[[1,4,7],[1,4,7],[1,4,7]];
   let C=subtract(A,B);
@@ -132,7 +131,7 @@ test_must_fail(()=>{check_matrix([[1],[],[1,2]])}); //different number of elemen
 
 //determinants
 {
-  console.log("Testing determinant")
+  console.log("Testing determinant()")
   assert(determinant([[1,3],[2,4]]                                    )== -2,"Determinant is not -2" );
   assert(determinant([[1,4,7],[2,5,8],[3,6,9]]                        )==  0,"Determinant is not 0"  );
   assert(determinant([[2,4,-2,4],[1,5,5,11],[-1,-3,-2,-4],[2,6,6,8]]  )==-12,"Determinant is not -12");
@@ -146,7 +145,7 @@ test_must_fail(()=>{check_matrix([[1],[],[1,2]])}); //different number of elemen
 
 //adjoint matrix
 {
-  console.log("Testing adjoint matrix")
+  console.log("Testing adjoint()")
   let A=[[1,0,4],[0,3,0],[2,0,5]];
   let B=adjoint(A);
   assert(are_equal(B,[[15,0,-6],[0,-3,0],[-12,0,3]]),"B is the adjoint of A");
@@ -154,7 +153,7 @@ test_must_fail(()=>{check_matrix([[1],[],[1,2]])}); //different number of elemen
 
 //inverse matrix
 {
-  console.log("Testing inverse matrix")
+  console.log("Testing inverse()")
   let A=[[4,0,1],[0,0,-2],[0,-2,8]];
   let Ai=inverse(A);
   let I=multiply(A,Ai);
@@ -182,7 +181,7 @@ test_must_fail(()=>{check_matrix([[1],[],[1,2]])}); //different number of elemen
 }
 
 {//test for gaussian elimination
-  console.log("Testing gaussian elimination")
+  console.log("Testing gaussian_elimination()")
   //create large matrix of random numbers with zeros
   let n=100;
   let M=[];
@@ -202,7 +201,7 @@ test_must_fail(()=>{check_matrix([[1],[],[1,2]])}); //different number of elemen
 }
 
 {//test for covariance matrix TODO
-  console.log("Testing covariance matrix")
+  console.log("Testing covariance_matrix()")
   let X =[[15,35,20,14,28],[12.5,15.8,9.3,20.1,5.2],[50,55,70,65,80]];
   let S = covariance_matrix(X);
   let Xb = [
@@ -214,7 +213,7 @@ test_must_fail(()=>{check_matrix([[1],[],[1,2]])}); //different number of elemen
 }
 
 {//tests for PCA
-  console.log("Testing PCA");
+  console.log("Testing PCA() and create_PCA_report()");
   const M=[//Ariane flights dataset
     [121.9   , 120.9   , 124.1   , 122.2   , 119.8   , 125.745 , 123.43  , 123.883 , 125.353 , 126.0153 , 125.3861 , 124.4702 , 121.3318 , 123.4016 , 121.654] ,
     [91.137  , 94.685  , 90.322  , 90.025  , 86.933  , 89.343  , 89.125  , 94.878  , 89.303  , 93.7609  , 92.4001  , 90.0061  , 87.8128  , 88.6698  , 85.324]  ,
@@ -222,8 +221,25 @@ test_must_fail(()=>{check_matrix([[1],[],[1,2]])}); //different number of elemen
     [126.2   , 124.3   , 126.9   , 125.9   , 123.8   , 129.197 , 129.044 , 126.674 , 129.283 , 128.8173 , 128.9062 , 128.2996 , 125.1422 , 126.7221 , 124.701] ,
     [24.2    , 19.8    , 19.2    , 20.06   , 19.5    , 21.75   , 21.79   , 20.06   , 22.43   , 22.52    , 23.32    , 24.32    , 17.68    , 17.38    , 17.71]
   ];
-  let result = PCA(M);
+  let r=PCA(M);
   //console.log(result);
+  //create_PCA_report(M,false,['a','b','c','d','e']);
+  const M2=transposed([//Principal Component Analysis, Abdi&Williams, page 19
+    [14,7,8,7 ,7,13,7],
+    [10,7,6,4 ,3,14,7],
+    [8 ,5,5,10,5,12,5],
+    [2 ,4,7,16,7,11,3],
+    [6 ,2,4,13,3,10,3],
+  ]);
+  let r2=PCA(M2);
+  //console.log(r2);
+}
+
+{//test for normalize()
+  console.log("Testing normalize()");
+  let arr=[1,2,3,4,5,6,7,8,9,10];
+  //console.log(arr.normalize());
+  //console.log(arr.map(n=>n*155).normalize());
 }
 
 console.log("\nALL TESTS PASSED");

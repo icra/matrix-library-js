@@ -23,7 +23,7 @@ import {finv} from "./finv/finv.js"
 //aproximation to zero
 const TOL=1e-40;
 
-/* Numeric array utils */
+/* Array utils */
 Array.prototype.sum=function(){return this.reduce((p,c)=>(p+c),0)} //number
 Array.prototype.mean=function(){return this.length?this.sum()/this.length:0}; //number
 Array.prototype.stddev=function(){
@@ -886,11 +886,11 @@ export function create_PCA_report(X,a,names_columns){
     csv_report+=String(i+1)+','+scores[i].join(',')+','+original_data[i].join(',')+'\n';
   };
 
-  //FAULT DETECTION section
-  //print table Q vs T2
-  csv_report+="\nobservation, Q, T2\n";
+  /*FAULT DETECTION section*/
+  //table Q vs T2
+  csv_report+="\nobservation,Q,Q_threshold_95,T2,T2_threshold_95\n";
   for(let i=0;i<res.observations;i++){
-    csv_report+=`${i+1}, ${res.Q_by_observation[i]}, ${res.T2_by_observation[i]}\n`;
+    csv_report+=`${i+1},${res.Q_by_observation[i]},${res.Q_threshold_95},${res.T2_by_observation[i]},${res.T2_threshold_95}\n`;
   }
 
   //print contributions to faults by variable
