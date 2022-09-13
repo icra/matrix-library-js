@@ -711,23 +711,30 @@ export function diag(arr){
   return M;
 }
 
-export function PCA(M,a){
+export function PCA(M,a,normalize){
   a=a||false; //nº of PCs to keep
+  normalize=normalize??true;
 
   let m = M.length;    //nº of variables
   let n = M[0].length; //nº of observations
   //console.log("----PCA----"); //debug
   //console.log({observations:n, variables:m}); //debug
 
-  //mean center and scale with unit variance
-  let X = M.map(col=>col.normalize());
+  let X;
+  if(normalize){
+    //mean center AND scale with unit variance
+    X = M.map(col=>col.normalize());
+  }else{
+    //mean center only
+    X = M.map(col=>col.mean_center());
+  }
 
   //covariance matrix
-  let S = escalate(multiply(transposed(X),X),1/(n-1));
+  let S=escalate(multiply(transposed(X),X),1/(n-1));
 
   //SVD and eigenvalues
   let svd                  = SVD(S);
-  let eigenvalues_unsorted = svd.q; //array length m
+  let eigenvalues_unsorted = svd.q;             //array length m
   let loadings_unsorted    = transposed(svd.u); //matrix size mxm
 
   //sort eigenvalues and loadings
