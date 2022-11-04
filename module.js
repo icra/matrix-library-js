@@ -713,7 +713,7 @@ export function diag(arr){
 
 export function PCA(M,a,normalize){
   a=a||false; //nº of PCs to keep
-  normalize=normalize??true;
+  normalize=normalize??true; //true if undefined
 
   let m = M.length;    //nº of variables
   let n = M[0].length; //nº of observations
@@ -729,17 +729,20 @@ export function PCA(M,a,normalize){
     X = M.map(col=>col.mean_center());
   }
 
-  //covariance matrix
+  //correlation matrix (if X is normalized)
+  //covariance matrix (if X is mean centered only)
   let S=escalate(multiply(transposed(X),X),1/(n-1));
 
-  //SVD and eigenvalues
-  let svd                  = SVD(S);
-  let eigenvalues_unsorted = svd.q;             //array length m
+  //SVD and eigenvalues of S
+  let svd                  = SVD(S); //object {q,u,v}
+  let eigenvalues_unsorted = svd.q.map(n=>n); //array length m
   let loadings_unsorted    = transposed(svd.u); //matrix size mxm
 
+  //console.log(svd)
+
   //sort eigenvalues and loadings
-  let eigenvalues_sorted = [];
-  let loadings_sorted    = [];
+  let eigenvalues_sorted=[];
+  let loadings_sorted   =[];
   for(let i=0; i<eigenvalues_unsorted.length; i++){
     let max   = Math.max.apply(null, eigenvalues_unsorted);
     let index = eigenvalues_unsorted.indexOf(max);
@@ -786,20 +789,20 @@ export function PCA(M,a,normalize){
 
   //SPE Q contribution analysis
   let Q_threshold_95 = (function(){
-    let sqrt      = Math.sqrt; //function
-    let theta1    = eigenvalues_not_considered.sum(); //number
-    let theta2    = eigenvalues_not_considered.map(e=>e**2).sum(); //number
-    let theta3    = eigenvalues_not_considered.map(e=>e**3).sum(); //number
-
+    let sqrt   = Math.sqrt; //function
+    let theta1 = eigenvalues_not_considered.sum(); //number
+    let theta2 = eigenvalues_not_considered.map(e=>e**2).sum(); //number
+    let theta3 = eigenvalues_not_considered.map(e=>e**3).sum(); //number
     if(theta1==0) return Infinity;
 
     //llindar per Q amb una significança del 5%
-    let ca        = 1.644854; //from qnorm(0.95,0,1) in R; //number
-    let h0        = 1-(2*theta1*theta3)/(3*theta2**2);
+    let ca = 1.644854; //from qnorm(0.95,0,1) in R; //number
+    let h0 = 1-(2*theta1*theta3)/(3*theta2**2);
     return theta1*(ca*h0*sqrt(2*theta2)/theta1 + 1 + theta2*h0*(h0-1)/(theta1**2))**(1/h0); //number
   })(); //number
   let rrT = multiply(residuals,transposed(residuals)); //matrix nxn
   let Q   = rrT.map((col,i)=>col[i]); //array (diagonal of rrT)
+  let RESS = Q.sum(); //residual sum of squares
 
   //observations with faults for Q
   let faults_for_Q=[];
@@ -825,7 +828,7 @@ export function PCA(M,a,normalize){
   let faults_for_T2=[];
   T2_by_observation.forEach((n,i)=>{
     if(n<T2_threshold_95) return;
-    let T2_residual = n;
+    let T2_residual=n;
 
     //get observation i (faulty)
     let xi = get_row(X,i); //array of size m
@@ -849,13 +852,27 @@ export function PCA(M,a,normalize){
   });
 
   return {
-    observations:n, variables:m, info,
-    eigenvalues, eigenvalues_sorted,
-    variance, accumulated_variance,
-    loadings, scores,
-    Q_threshold_95,     T2_threshold_95,
-    Q_by_observation:Q, T2_by_observation,
-    faults_for_Q,       faults_for_T2,
+    observations:n,
+    variables:m,
+    info,
+
+    eigenvalues,
+    eigenvalues_sorted,
+    variance,
+    accumulated_variance,
+
+    loadings,
+    scores,
+    residuals,
+    RESS,
+
+    //SPC data (control charts)
+    Q_threshold_95,
+    T2_threshold_95,
+    Q_by_observation:Q,
+    T2_by_observation,
+    faults_for_Q,
+    faults_for_T2,
   };
 }
 
