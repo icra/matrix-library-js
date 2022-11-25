@@ -1,3 +1,5 @@
+status: usable but not everything documented [work in progress as 2022-11-25]
+
 Matrix Library in Javascript in a single JS file
 
 Suppose you have a 3x3 matrix called "A":
