@@ -814,7 +814,7 @@ export function PCA(M,a,normalize){
   });
 
   //Hotelling T^2 contribution analysis
-  let T2_threshold_95 = a*(n-1)/(n-a)*finv(0.95,a,n-a);
+  let T2_threshold_95 = a*(n+1)*(n-1)/(n*(n-a))*finv(0.95,a,n-a);
   let T2_by_observation=[];
   for(let i=0;i<n;i++){
     //observation i reprojected into principal components
