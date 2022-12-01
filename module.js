@@ -20,41 +20,46 @@
 */
 import {finv} from "./finv/finv.js"
 
-//aproximation to zero
-const TOL=1e-40;
+/*
+  TOL: aproximation to zero
+*/
+const TOL = 1e-40;
 
-/* Array utils */
-Array.prototype.sum=function(){return this.reduce((p,c)=>(p+c),0)} //number
-Array.prototype.mean=function(){return this.length?this.sum()/this.length:0}; //number
+/*
+  Array utils
+*/
+Array.prototype.sum=function(){return this.reduce((p,c)=>(p+c),0)};//number
+Array.prototype.mean=function(){return this.length?this.sum()/this.length:0};//number
 Array.prototype.stddev=function(){
-  let n = this.length; //number
-  if(n<2) return 0; //number
-  let m = this.mean(); //number
-  let square_diffs = this.map(x=>Math.pow(x-m,2)); //array
-  let ss = square_diffs.sum(); //number
-  return Math.sqrt(ss/(n-1)); //number
+  let n = this.length;//number
+  if(n<2) return 0;//number
+  let m = this.mean();//number
+  let square_diffs = this.map(x=>Math.pow(x-m,2));//array
+  let ss = square_diffs.sum();//number
+  return Math.sqrt(ss/(n-1));//number
 };
 Array.prototype.mean_center=function(){
-  let m = this.mean(); //number
-  return this.map(x=>(x-m)); //array
+  let m = this.mean();//number
+  return this.map(x=>(x-m));//array
 }
 Array.prototype.normalize=function(){
-  let m = this.mean(); //number
-  let s = this.stddev(); //number
-  return this.map(x=>(x-m)/s); //array
+  let m = this.mean();//number
+  let s = this.stddev();//number
+  return this.map(x=>(x-m)/s);//array
 }
 
 /*
-  Simple assert function
+  Assert function
 */
 export function assert(expr,message){
   //expr: boolean
   //message: string
-  if(!expr) throw(message);
   /*
-  assert(1==1,"1 is 1");//passes
-  assert(0==1,"0 is not 1");//throws exception
+    examples:
+    assert(1==1,"1 is 1");//passes
+    assert(0==1,"0 is not 1");//throws exception
   */
+  if(!expr) throw(message);
 }
 
 /*
@@ -67,7 +72,7 @@ export function check_matrix(M){
     assert(col.constructor===Array,`Column ${i} is not an Array`);
   });
 
-  //Check that length of columns is the same
+  //check that length of each column is the same
   let len = M[0].length;
   assert(len,"Length of the first column is 0");
   M.forEach(col=>{
@@ -75,6 +80,9 @@ export function check_matrix(M){
   });
 }
 
+/*
+  Calculate size of matrix M (rows, columns)
+*/
 export function size_of_matrix(M){
   check_matrix(M);
   let rows = M[0].length;
@@ -83,7 +91,8 @@ export function size_of_matrix(M){
 }
 
 /*
-  Generate an array of "n" zeros, for example: zeros(3) => [0,0,0]
+  Create an array of "n" zeros.
+    - example: zeros(3) => [0,0,0]
 */
 export function zeros(n){
   let arr=new Array(n);
@@ -91,19 +100,18 @@ export function zeros(n){
     arr[i]=0;
   }
   return arr;
-  //console.log(zeros(2))
 }
 
 /*
-  Generate an array of "n" ones, for example: ones(3) => [1,1,1]
+  Create an array of "n" ones.
+    - example: ones(3) => [1,1,1]
 */
 export function ones(n){
-  return zeros(n).map(el=>1);
-  //console.log(ones(3))
+  return zeros(n).map(x=>1);
 }
 
 /*
-  Check if matrices A and B have the same exact values
+  Check if matrix A and matrix B have the same exact values
 */
 export function are_equal(A,B){
   check_matrix(A);
@@ -112,11 +120,11 @@ export function are_equal(A,B){
   assert(A[0].length==B[0].length,"A and B have different number of rows");
   return A.every((col,j)=>col.every((el,i)=>el==B[j][i]));
   /*
-  let A=[[1,2],[3,4]];
-  let B=[[1,2],[3,4]];
-  let C=[[0,0],[0,0]];
-  console.log(are_equal(A,B));//true
-  console.log(are_equal(A,C));//false
+    let A=[[1,2],[3,4]];
+    let B=[[1,2],[3,4]];
+    let C=[[0,0],[0,0]];
+    console.log(are_equal(A,B));//true
+    console.log(are_equal(A,C));//false
   */
 }
 
@@ -156,7 +164,7 @@ function get_row(M,i){
 }
 
 /*
-  Multiplication of matrices A and B
+  Multiplication of matrix A and matrix B
 */
 export function multiply(A,B){
   check_matrix(A);
@@ -186,8 +194,7 @@ export function multiply(A,B){
 }
 
 /*
-  Multiply all elements from a matrix M by an
-  escalar (number)
+  Multiply all matrix M's elements by a scalar (number)
 */
 export function escalate(M,escalar){
   check_matrix(M);
@@ -195,7 +202,7 @@ export function escalate(M,escalar){
 }
 
 /*
-  Sum of matrix A + B
+  Sum of matrix A + matrix B
 */
 export function sum(A,B){
   check_matrix(A);
@@ -206,14 +213,15 @@ export function sum(A,B){
 }
 
 /*
-  Subtract matrix B from A
+  Subtraction of matrix A - matrix B
 */
 export function subtract(A,B){
   return sum(A,escalate(B,-1));
 }
 
 /*
-  Omit row "i" and column "j" from a matrix M and return resulting minor matrix
+  Create a new "minor" matrix from matrix M:
+  omitting row "i" and column "j"
 */
 export function minor(M,i,j){
   check_matrix(M);
@@ -236,18 +244,21 @@ export function minor(M,i,j){
 }
 
 /*
-  Compute determinant of a matrix M
+  Determinant of matrix M
 */
 export function determinant(M){
   check_matrix(M);
+
+  //mandatory: matrix has to be square
   assert(M.length==M[0].length,"Matrix M is not square");
 
-  let n = M.length; //number of rows and cols
+  //number of rows and cols
+  let n = M.length;
 
   if(n==1) return M[0][0];
   if(n==2) return M[0][0]*M[1][1] - M[0][1]*M[1][0];
 
-  //transform matrix to triangular
+  //transform M to triangular matrix T
   let T=gaussian_elimination(M);
 
   //initialize determinant at 1
@@ -262,7 +273,7 @@ export function determinant(M){
 }
 
 /*
-  Compute the adjoint of a matrix M
+  Adjoint of matrix M
 */
 export function adjoint(M){
   check_matrix(M);
@@ -280,22 +291,24 @@ export function adjoint(M){
 }
 
 /*
-  Compute the inverse of a matrix M
+  Inverse of matrix M
 */
 export function inverse(M){
   check_matrix(M);
-  let d = determinant(M);
-  assert(d,"Matrix M cannot be inverted, determinant is zero");
+  let d=determinant(M);
+  assert(d,"Matrix cannot be inverted, determinant is zero");
 
-  //adjoint de la transposed
+  //adjoint of transposed of M
   let Mta = adjoint(transposed(M));
   return escalate(Mta,1/d);
+
+  //test
   //let A=[[4,0,1],[0,0,-2],[0,-2,8]];
   //console.log(multiply(A,inverse(A)));//identity
 }
 
 /*
-  generate an identity matrix of size nxn
+  Create an identity matrix of size n
 */
 export function identity(n){
   let I=new Array(n);
@@ -308,6 +321,7 @@ export function identity(n){
   };
 
   return I;
+  //test
   //console.log(identity(0));
   //console.log(identity(1));
   //console.log(identity(2));
@@ -317,17 +331,17 @@ export function identity(n){
 
 /*
   Gaussian Elimination
-  Transform matrix M to triangle matrix T)
+  Transform matrix M to triangular matrix
 */
 export function gaussian_elimination(M){
   check_matrix(M);
 
   let n = M.length; //size
 
-  //copy M to T (new matrix)
-  let T = M.map(col=>col.map(el=>el));
+  //create a copy of M
+  let T = M.map(col=>col.map(x=>x));
 
-  if(n==1) return T;
+  if(n<2) return T;
 
   //iterate rows (start on 2nd row)
   for(let i=1;i<n;i++){
@@ -350,7 +364,7 @@ export function gaussian_elimination(M){
       }
     }
 
-    //now T[0][0] is not zero
+    //now T[0][0] is guaranteed not being zero
     let ratio = -T[i][0]/T[0][0];
 
     //modify the entire row, so that T[i][0] is 0
@@ -372,12 +386,16 @@ export function gaussian_elimination(M){
   return T;
 }
 
-//mean center and scaled with unit variance
+/*
+  Mean center and scale with unit variance each column of matrix M
+*/
 export function normalize_matrix(X){
   return X.map(col=>col.normalize());
 }
 
-//compute covariance matrix
+/*
+  Compute covariance matrix
+*/
 export function covariance_matrix(X){
   check_matrix(X);
 
@@ -392,6 +410,9 @@ export function covariance_matrix(X){
   return S;
 }
 
+/*
+  Check if "eig" is an eigenvalue of matrix A
+*/
 export function check_eigenvalue(A,eig){
   //A: matrix
   //eig: number
@@ -702,7 +723,9 @@ export function SVD(a, withu, withv, eps, tol){
   return { u, q, v };
 }
 
-//create a square diagonal matrix from an array
+/*
+  Create a square diagonal matrix from an array
+*/
 export function diag(arr){
   let n = arr.length;
   let M = new Array(n)
@@ -711,38 +734,44 @@ export function diag(arr){
   return M;
 }
 
-export function PCA(M,a,normalize){
-  a=a||false; //nº of PCs to keep
+/*
+  Compute PCA of matrix M
+  - Also calculate Hotelling T2 and Q faults and contributions of each variable
+  - Thresholds for Q and T2 are computed using 95% confidence
+*/
+export function PCA(M, a, normalize, change_sign_of_loadings){
+  check_matrix(M);
+
+  //parameters
+  a=a||false; //nº of PCs to keep (or automatic)
   normalize=normalize??true; //true if undefined
+  change_sign_of_loadings=change_sign_of_loadings??false; //false if undefined
 
   let m = M.length;    //nº of variables
   let n = M[0].length; //nº of observations
-  //console.log("----PCA----"); //debug
-  //console.log({observations:n, variables:m}); //debug
 
-  let X;
+  let X; //new matrix X with centered data
   if(normalize){
-    //mean center AND scale with unit variance
+    //mean center AND scale (variance=1)
     X = M.map(col=>col.normalize());
   }else{
     //mean center only
     X = M.map(col=>col.mean_center());
   }
 
-  //correlation matrix (if X is normalized)
-  //covariance matrix (if X is mean centered only)
-  let S=escalate(multiply(transposed(X),X),1/(n-1));
+  //compute S:
+  //  - S is the correlation matrix (if X is normalized)
+  //  - S is the covariance matrix (if X is mean centered only)
+  let S = escalate(multiply(transposed(X),X),1/(n-1));
 
   //SVD and eigenvalues of S
   let svd                  = SVD(S); //object {q,u,v}
   let eigenvalues_unsorted = svd.q.map(n=>n); //array length m
   let loadings_unsorted    = transposed(svd.u); //matrix size mxm
 
-  //console.log(svd)
-
   //sort eigenvalues and loadings
-  let eigenvalues_sorted=[];
-  let loadings_sorted   =[];
+  let eigenvalues_sorted = [];
+  let loadings_sorted    = [];
   for(let i=0; i<eigenvalues_unsorted.length; i++){
     let max   = Math.max.apply(null, eigenvalues_unsorted);
     let index = eigenvalues_unsorted.indexOf(max);
@@ -758,7 +787,7 @@ export function PCA(M,a,normalize){
 
   //we keep "a" loadings: number of principal components
   let info=[];
-  if(a===false){
+  if(a===false){ //calculate a
     for(let i=0;i<accumulated_variance.length;i++){
       if(accumulated_variance[i]>99){
         a=i+1; //number of PCs to keep
@@ -772,13 +801,18 @@ export function PCA(M,a,normalize){
   info.push(`Kept ${a} of ${m} PCs: explaining ${(accumulated_variance[a-1]).toFixed(2)}% of variance`);
   //console.log(info);
 
-  //eigenvalues not considered for later analysis (Q test)
+  //eigenvalues not considered: keep them for later analysis (Q test)
   let eigenvalues_not_considered = eigenvalues_sorted.slice(a);
   //console.log({eigenvalues_not_considered});
 
   //overwrite loadings and eigenvalues
-  let loadings    = loadings_sorted   .slice(0,a); //we keep only "a" columns
+  let loadings    = loadings_sorted.slice(0,a); //only the first "a" columns
   let eigenvalues = eigenvalues_sorted.slice(0,a);
+
+  //multiply loadings by -1, if selected
+  if(change_sign_of_loadings){
+    loadings = escalate(loadings,-1);
+  }
 
   //compute scores: observations in the new space
   let scores = multiply(X,loadings);
@@ -787,7 +821,7 @@ export function PCA(M,a,normalize){
   let residuals = subtract(X, multiply(scores,transposed(loadings)));
   //-----------------------------------------------------------------
 
-  //SPE Q contribution analysis
+  //Q (also known as "SPE") contribution analysis
   let Q_threshold_95 = (function(){
     let sqrt   = Math.sqrt; //function
     let theta1 = eigenvalues_not_considered.sum(); //number
@@ -807,10 +841,15 @@ export function PCA(M,a,normalize){
   //observations with faults for Q
   let faults_for_Q=[];
   Q.forEach((n,i)=>{
-    if(n<Q_threshold_95) return;
+    let alarm = n >= Q_threshold_95;
     let Q_residual = n;
     let contributions = get_row(residuals,i);
-    faults_for_Q.push({observation:i, Q_residual, contributions});
+    faults_for_Q.push({
+      observation:i,
+      Q_residual,
+      contributions,
+      alarm,
+    });
   });
 
   //Hotelling T^2 contribution analysis
@@ -827,8 +866,8 @@ export function PCA(M,a,normalize){
   //observations with faults for T2
   let faults_for_T2=[];
   T2_by_observation.forEach((n,i)=>{
-    if(n<T2_threshold_95) return;
-    let T2_residual=n;
+    let T2_residual = n; //number
+    let alarm       = n >= T2_threshold_95; //bool
 
     //get observation i (faulty)
     let xi = get_row(X,i); //array of size m
@@ -848,10 +887,15 @@ export function PCA(M,a,normalize){
     }
 
     //console.log({contributions});
-    faults_for_T2.push({observation:i, T2_residual, contributions});
+    faults_for_T2.push({
+      observation:i,
+      T2_residual,
+      contributions,
+      alarm,
+    });
   });
 
-  return {
+  return{
     observations:n,
     variables:m,
     info,
