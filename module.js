@@ -900,6 +900,8 @@ export function PCA(M, a, normalize, change_sign_of_loadings){
     variables:m,
     info,
 
+    input_matrix:X,
+
     eigenvalues,
     eigenvalues_sorted,
     variance,
