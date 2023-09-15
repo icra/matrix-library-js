@@ -788,12 +788,19 @@ export function PCA(M, a, normalize, change_sign_of_loadings){
   //we keep "a" loadings: number of principal components
   let info=[];
   if(a===false){ //calculate a
-    for(let i=0;i<accumulated_variance.length;i++){
-      if(accumulated_variance[i]>99){
-        a=i+1; //number of PCs to keep
-        break;
+    //method 1: accumulated variance > x %
+    /*
+      for(let i=0;i<accumulated_variance.length;i++){
+        if(accumulated_variance[i]>99){
+          a=i+1; //number of PCs to keep
+          break;
+        }
       }
-    }
+    */
+
+    //method 2: eigenvalues larger than 1
+    a = eigenvalues_sorted.filter(n=>n>1).length;
+
     info.push(`Number of PCs kept: ${a} <-- determined automatically`);
   }else{
     info.push(`Number of PCs kept: ${a} <-- passed as parameter`);
